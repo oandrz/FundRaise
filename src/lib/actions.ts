@@ -11,13 +11,7 @@ interface ConfirmOrderResult {
   orderId?: string;
 }
 
-async function appendToGoogleSheet(orderId: string, items: OrderItem[], totalPrice: number): Promise<void> {
-  console.log('Attempting to append to Google Sheet...');
-  console.log(`  GOOGLE_SHEETS_CLIENT_EMAIL is ${process.env.GOOGLE_SHEETS_CLIENT_EMAIL ? 'present' : 'MISSING'}`);
-  console.log(`  GOOGLE_SHEETS_PRIVATE_KEY is ${process.env.GOOGLE_SHEETS_PRIVATE_KEY ? 'present' : 'MISSING'}`);
-  console.log(`  GOOGLE_SHEET_ID is ${process.env.GOOGLE_SHEET_ID ? 'present' : 'MISSING'}`);
-  console.log(`  GOOGLE_SHEET_RANGE is set to: ${process.env.GOOGLE_SHEET_RANGE || 'Sheet1!A1 (default)'}`);
-
+async function appendToGoogleSheet(orderId: string, items: OrderItem[], totalPrice: number, customerName: string, customerPhone: string): Promise<void> {
   try {
     const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
     const privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'); // Important for .env formatting
@@ -41,11 +35,21 @@ async function appendToGoogleSheet(orderId: string, items: OrderItem[], totalPri
 
     const timestamp = new Date().toISOString();
     
-    const rowData: (string | number)[] = [orderId, timestamp];
+    // Create a flat array of all items' details
+    const itemDetails: (string | number)[] = [];
     items.forEach(item => {
-      rowData.push(item.name, item.quantity, item.price, item.price * item.quantity);
+      itemDetails.push(item.name, item.quantity, item.price, item.price * item.quantity);
     });
-    rowData.push(totalPrice);
+    
+    // Combine all data in the desired order: Order ID, Timestamp, Customer Name, Customer Phone, [Item Details], Total
+    const rowData: (string | number)[] = [
+      orderId, 
+      timestamp,
+      customerName,
+      customerPhone,
+      ...itemDetails,
+      totalPrice
+    ];
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
@@ -64,7 +68,7 @@ async function appendToGoogleSheet(orderId: string, items: OrderItem[], totalPri
   }
 }
 
-export async function confirmOrder(items: OrderItem[]): Promise<ConfirmOrderResult> {
+export async function confirmOrder(items: OrderItem[], customerName: string, customerPhone: string): Promise<ConfirmOrderResult> {
   if (!items || items.length === 0) {
     return { success: false, message: 'Your order is empty.' };
   }
@@ -80,7 +84,7 @@ export async function confirmOrder(items: OrderItem[]): Promise<ConfirmOrderResu
     // Attempt to append to Google Sheet only if GOOGLE_SHEET_ID is configured
     if (process.env.GOOGLE_SHEET_ID) {
       console.log('GOOGLE_SHEET_ID is set, proceeding with Google Sheets integration.');
-      await appendToGoogleSheet(orderId, items, totalPrice);
+      await appendToGoogleSheet(orderId, items, totalPrice, customerName, customerPhone);
       return {
         success: true,
         message: 'Your order has been confirmed and saved to our records.',

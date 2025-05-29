@@ -18,6 +18,69 @@ export default function OrderPage() {
   const { toast } = useToast();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  
+  const validatePhone = (phone: string): boolean => {
+    // Allow numbers, spaces, +, -, and parentheses
+    const phoneRegex = /^[0-9\s+\-()]*$/;
+    return phoneRegex.test(phone);
+  };
+  
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digit characters
+    const cleaned = value.replace(/\D/g, '');
+    
+    // Check for Indonesian number (starts with 08, 628, +628, or 628)
+    const indonesianMatch = cleaned.match(/^(\+?62|0)?(\d{3})(\d{3,4})(\d{3,4})$/);
+    if (indonesianMatch) {
+      const [, prefix, first, middle, last] = indonesianMatch;
+      return `+62 ${first}${middle}${last}`.replace(/(\d{3})(\d{3,4})(\d{3,4})/, '$1-$2-$3');
+    }
+    
+    // Check for Singapore number (starts with +65, 65, or 0)
+    const singaporeMatch = cleaned.match(/^(\+?65|0)?(\d{4})(\d{4})$/);
+    if (singaporeMatch) {
+      const [, prefix, first, last] = singaporeMatch;
+      return `+65 ${first} ${last}`;
+    }
+    
+    // Default formatting if no specific pattern matches
+    if (cleaned.length > 0) {
+      return `+${cleaned}`;
+    }
+    
+    return value;
+  };
+  
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '' || validatePhone(value)) {
+      setCustomerPhone(value);
+      setPhoneError('');
+    }
+  };
+  
+  const handlePhoneBlur = () => {
+    const trimmedPhone = customerPhone.trim();
+    if (trimmedPhone === '') {
+      setPhoneError('Phone number is required');
+    } else {
+      // Check for valid Indonesian or Singaporean number
+      const cleaned = trimmedPhone.replace(/\D/g, '');
+      const isIndonesian = /^(\+?62|0)[0-9]{9,12}$/.test(cleaned);
+      const isSingaporean = /^(\+?65|0)[0-9]{8}$/.test(cleaned);
+      
+      if (!isIndonesian && !isSingaporean) {
+        setPhoneError('Please enter a valid Indonesian (e.g., 0812-3456-7890) or Singaporean (e.g., +65 6123 4567) number');
+      } else {
+        // Format the phone number when leaving the field
+        setCustomerPhone(formatPhoneNumber(cleaned));
+        setPhoneError('');
+      }
+    }
+  };
 
   const totalPrice = getCartTotalPrice();
 
@@ -28,16 +91,53 @@ export default function OrderPage() {
   };
 
   const handleConfirmOrder = async () => {
+    const trimmedName = customerName.trim();
+    const trimmedPhone = customerPhone.trim();
+    
+    if (!trimmedName) {
+      toast({
+        title: 'Name Required',
+        description: 'Please enter your name before confirming the order.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (!trimmedPhone) {
+      setPhoneError('Phone number is required');
+      toast({
+        title: 'Phone Number Required',
+        description: 'Please enter your phone number before confirming the order.',
+        variant: 'destructive',
+      });
+      // Scroll to the phone input
+      document.getElementById('customerPhone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('customerPhone')?.focus();
+      return;
+    }
+    
+    const cleanedPhone = trimmedPhone.replace(/\D/g, '');
+    const isIndonesian = /^(\+?62|0)[0-9]{9,12}$/.test(cleanedPhone);
+    const isSingaporean = /^(\+?65|0)[0-9]{8}$/.test(cleanedPhone);
+    
+    if (!isIndonesian && !isSingaporean) {
+      setPhoneError('Please enter a valid Indonesian (e.g., 0812-3456-7890) or Singaporean (e.g., +65 6123 4567) number');
+      document.getElementById('customerPhone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('customerPhone')?.focus();
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
-      const result = await confirmOrder(orderItems);
+      const result = await confirmOrder(orderItems, trimmedName, trimmedPhone);
       if (result.success) {
         toast({
           title: 'Order Confirmed!',
           description: `${result.message} (Order ID: ${result.orderId})`,
         });
         clearCart();
-        router.push('/order/success'); // Optional: redirect to a success page
+        // Redirect to success page with customer name as a query parameter
+        router.push(`/order/success?name=${encodeURIComponent(trimmedName)}&phone=${encodeURIComponent(trimmedPhone)}`);
       } else {
         toast({
           title: 'Order Failed',
@@ -136,23 +236,61 @@ export default function OrderPage() {
             </TableFooter>
           </Table>
         </CardContent>
-        <CardFooter className="flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-muted/30">
-           <Button variant="outline" onClick={clearCart} disabled={isSubmitting}>
-            Clear Order
-          </Button>
-          <Button 
-            size="lg" 
-            onClick={handleConfirmOrder} 
-            disabled={isSubmitting || orderItems.length === 0}
-            className="w-full sm:w-auto"
-          >
-            {isSubmitting ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <CheckCircle className="mr-2 h-5 w-5" />
-            )}
-            {isSubmitting ? 'Confirming...' : 'Confirm Order'}
-          </Button>
+        <CardFooter className="flex flex-col gap-6 p-6 bg-muted/30">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+            <div className="w-full">
+              <label htmlFor="customerName" className="block text-sm font-medium mb-2">
+                Your Name <span className="text-destructive">*</span>
+              </label>
+              <Input
+                id="customerName"
+                type="text"
+                placeholder="Enter your name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full"
+                required
+              />
+            </div>
+            <div className="w-full">
+              <label htmlFor="customerPhone" className="block text-sm font-medium mb-2">
+                Phone Number <span className="text-destructive">*</span>
+              </label>
+              <div className="relative">
+                <Input
+                  id="customerPhone"
+                  type="tel"
+                  placeholder="e.g., 0812-3456-7890 (ID) or +65 6123 4567 (SG)"
+                  value={customerPhone}
+                  onChange={handlePhoneChange}
+                  onBlur={handlePhoneBlur}
+                  className={`w-full ${phoneError ? 'border-destructive' : ''}`}
+                  required
+                />
+                {phoneError && (
+                  <p className="text-sm text-destructive mt-1">{phoneError}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-4">
+            <Button variant="outline" onClick={clearCart} disabled={isSubmitting}>
+              Clear Order
+            </Button>
+            <Button 
+              size="lg" 
+              onClick={handleConfirmOrder} 
+              disabled={isSubmitting || orderItems.length === 0}
+              className="w-full sm:w-auto"
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-5 w-5" />
+              )}
+              {isSubmitting ? 'Confirming...' : 'Confirm Order'}
+            </Button>
+          </div>
         </CardFooter>
       </Card>
     </div>
