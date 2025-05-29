@@ -15,7 +15,7 @@ export function AppHeader() {
       <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <Utensils className="h-6 w-6 text-primary" />
-          <span className="font-bold text-xl text-foreground">Sheet Eats</span>
+          <span className="font-bold text-xl text-foreground">FundRaising Mission Trip Batam</span>
         </Link>
         <nav className="flex items-center space-x-4">
           <Button variant="ghost" asChild>

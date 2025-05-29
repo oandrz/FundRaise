@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'FundRaising Mission Trip Batam',
-  description: 'Order food easily with Sheet Eats!',
+  description: 'Order food easily!',
 };
 
 export default function RootLayout({
@@ -34,7 +34,7 @@ export default function RootLayout({
             {children}
           </main>
           <footer className="py-6 text-center text-sm text-muted-foreground border-t">
-            © {new Date().getFullYear()} Sheet Eats. All rights reserved.
+            © {new Date().getFullYear()} FundRaising Mission Trip Batam. All rights reserved.
           </footer>
         </OrderProvider>
         <Toaster />
