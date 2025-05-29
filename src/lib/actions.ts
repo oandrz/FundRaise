@@ -1,35 +1,68 @@
-'use server';
-
-import type { OrderItem } from '@/types';
-
-export async function confirmOrder(orderItems: OrderItem[]): Promise<{ success: boolean; message: string; orderId?: string }> {
-  console.log('Order received:', orderItems);
-
-  // Simulate API call or database operation
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
-  // In a real application, you would:
-  // 1. Validate the orderItems
-  // 2. Calculate the total server-side
-  // 3. Save the order to a database
-  // 4. Integrate with Google Sheets API to send data
-
-  // For now, just simulate success
-  const success = true; // Math.random() > 0.2; // Simulate occasional failure
-
-  if (success) {
-    const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-    console.log(`Order ${orderId} confirmed successfully.`);
-    return {
-      success: true,
-      message: 'Order confirmed successfully! We are preparing your meal.',
-      orderId: orderId,
-    };
-  } else {
-    console.error('Order confirmation failed.');
-    return {
-      success: false,
-      message: 'There was an issue confirming your order. Please try again.',
-    };
+{
+  "name": "nextn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 9002",
+    "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
+    "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@genkit-ai/googleai": "^1.8.0",
+    "@genkit-ai/next": "^1.8.0",
+    "@hookform/resolvers": "^4.1.3",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-alert-dialog": "^1.1.6",
+    "@radix-ui/react-avatar": "^1.1.3",
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-menubar": "^1.1.6",
+    "@radix-ui/react-popover": "^1.1.6",
+    "@radix-ui/react-progress": "^1.1.2",
+    "@radix-ui/react-radio-group": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
+    "@radix-ui/react-select": "^2.1.6",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slider": "^1.2.3",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-switch": "^1.1.3",
+    "@radix-ui/react-tabs": "^1.1.3",
+    "@radix-ui/react-toast": "^1.2.6",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "@tanstack-query-firebase/react": "^1.0.5",
+    "@tanstack/react-query": "^5.66.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
+    "dotenv": "^16.5.0",
+    "firebase": "^11.8.1",
+    "genkit": "^1.8.0",
+    "googleapis": "^140.0.1",
+    "lucide-react": "^0.475.0",
+    "next": "15.2.3",
+    "patch-package": "^8.0.0",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.2",
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^3.0.1",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "genkit-cli": "^1.8.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }
