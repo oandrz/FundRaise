@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Sheet Eats',
+  title: 'FundRaising Mission Trip Batam',
   description: 'Order food easily with Sheet Eats!',
 };
 
