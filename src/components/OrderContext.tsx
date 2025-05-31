@@ -31,6 +31,9 @@ const orderReducer = (state: OrderState, action: OrderAction): OrderState => {
       const { item, quantity } = action.payload;
       if (quantity <= 0) return state; // Do not add if quantity is zero or less
 
+      // Create a new item object without the stock quantity to avoid confusion
+      const { quantity: stockQuantity, ...itemWithoutQuantity } = item;
+      
       const existingItemIndex = state.orderItems.findIndex(orderItem => orderItem.id === item.id);
       if (existingItemIndex > -1) {
         const updatedItems = state.orderItems.map((orderItem, index) =>
@@ -40,7 +43,10 @@ const orderReducer = (state: OrderState, action: OrderAction): OrderState => {
         );
         return { ...state, orderItems: updatedItems };
       } else {
-        return { ...state, orderItems: [...state.orderItems, { ...item, quantity }] };
+        return { 
+          ...state, 
+          orderItems: [...state.orderItems, { ...itemWithoutQuantity, quantity }] 
+        };
       }
     }
     case 'UPDATE_ITEM_QUANTITY': {

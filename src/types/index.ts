@@ -5,6 +5,7 @@ export interface MenuItem {
   price: number;
   category: string;
   imageUrl?: string;
+  quantity: number;
 }
 
 export interface OrderItem extends MenuItem {

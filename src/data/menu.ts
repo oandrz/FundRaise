@@ -6,7 +6,7 @@ export const menuItems: MenuItem[] = [
     name: 'Classic Burger',
     description: 'A juicy beef patty with fresh lettuce, tomato, and our special sauce.',
     price: 9.99,
-    category: 'Burgers',
+    category: 'Food',
     imageUrl: 'https://placehold.co/600x400.png',
     // data-ai-hint: "burger gourmet"
   },
@@ -15,7 +15,7 @@ export const menuItems: MenuItem[] = [
     name: 'Cheese Pizza',
     description: 'Classic cheese pizza with a rich tomato sauce and mozzarella.',
     price: 12.50,
-    category: 'Pizzas',
+    category: 'Food',
     imageUrl: 'https://placehold.co/600x400.png',
     // data-ai-hint: "pizza cheese"
   },
@@ -24,7 +24,7 @@ export const menuItems: MenuItem[] = [
     name: 'Caesar Salad',
     description: 'Crisp romaine lettuce, croutons, Parmesan cheese, and Caesar dressing.',
     price: 7.25,
-    category: 'Salads',
+    category: 'Food',
     imageUrl: 'https://placehold.co/600x400.png',
     // data-ai-hint: "salad caesar"
   },
@@ -33,7 +33,7 @@ export const menuItems: MenuItem[] = [
     name: 'French Fries',
     description: 'Golden crispy French fries, lightly salted.',
     price: 3.50,
-    category: 'Sides',
+    category: 'Food',
     imageUrl: 'https://placehold.co/600x400.png',
     // data-ai-hint: "french fries"
   },
@@ -42,7 +42,7 @@ export const menuItems: MenuItem[] = [
     name: 'Chocolate Milkshake',
     description: 'Thick and creamy chocolate milkshake topped with whipped cream.',
     price: 5.00,
-    category: 'Drinks',
+    category: 'Drink',
     imageUrl: 'https://placehold.co/600x400.png',
     // data-ai-hint: "milkshake chocolate"
   },
@@ -51,7 +51,7 @@ export const menuItems: MenuItem[] = [
     name: 'Spaghetti Carbonara',
     description: 'Spaghetti with creamy egg sauce, pancetta, and pecorino cheese.',
     price: 14.00,
-    category: 'Pastas',
+    category: 'Food',
     imageUrl: 'https://placehold.co/600x400.png',
     // data-ai-hint: "pasta carbonara"
   },
