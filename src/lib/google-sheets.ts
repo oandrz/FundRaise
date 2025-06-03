@@ -5,22 +5,87 @@ import type { MenuItem } from '@/types';
 // Initialize the Google Sheets API client
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID || '';
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SHEETS_CLIENT_EMAIL || '';
-const GOOGLE_PRIVATE_KEY = (process.env.GOOGLE_SHEETS_PRIVATE_KEY || '').replace(/\\\\n/g, '\\n');
+
+// Robust private key processing
+let GOOGLE_PRIVATE_KEY = (process.env.GOOGLE_SHEETS_PRIVATE_KEY || '')
+  .replace(/\\n/g, '\n')           // Replace escaped newlines
+  .replace(/^["']|["']$/g, '')     // Remove surrounding quotes
+  .replace(/\\\\/g, '\\')          // Fix double backslashes
+  .trim();                         // Remove extra whitespace
+
+// Fix private key formatting - add proper line breaks
+if (GOOGLE_PRIVATE_KEY && !GOOGLE_PRIVATE_KEY.includes('\n')) {
+  // Split the key into proper lines
+  const keyWithoutHeaders = GOOGLE_PRIVATE_KEY
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s+/g, ''); // Remove all whitespace
+  
+  // Add line breaks every 64 characters
+  const keyLines = [];
+  for (let i = 0; i < keyWithoutHeaders.length; i += 64) {
+    keyLines.push(keyWithoutHeaders.substring(i, i + 64));
+  }
+  
+  // Reconstruct the key with proper formatting
+  GOOGLE_PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----\n${keyLines.join('\n')}\n-----END PRIVATE KEY-----`;
+}
+
 const INVENTORY_SHEET_NAME = 'Inventory';
+
+console.log('=== Google Sheets Credentials Debug ===');
+console.log('SPREADSHEET_ID:', SPREADSHEET_ID ? '✓ Set' : '✗ Missing');
+console.log('CLIENT_EMAIL:', GOOGLE_SERVICE_ACCOUNT_EMAIL ? '✓ Set' : '✗ Missing');
+console.log('PRIVATE_KEY length:', GOOGLE_PRIVATE_KEY.length);
+console.log('PRIVATE_KEY first 50 chars:', GOOGLE_PRIVATE_KEY.substring(0, 50));
+console.log('PRIVATE_KEY last 50 chars:', GOOGLE_PRIVATE_KEY.substring(GOOGLE_PRIVATE_KEY.length - 50));
+console.log('PRIVATE_KEY has newlines:', GOOGLE_PRIVATE_KEY.includes('\n'));
 
 if (!SPREADSHEET_ID || !GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
   console.warn('Google Sheets credentials are not fully configured. Google Sheets integration will not work.');
 }
 
-// Create a new auth client for Google Sheets
+// Create a new auth client for Google Sheets with additional error handling
 const getAuthClient = () => {
-  return new JWT({
-    email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    key: GOOGLE_PRIVATE_KEY,
-    scopes: [
-      'https://www.googleapis.com/auth/spreadsheets',
-    ],
-  });
+  try {
+    // Try to create JWT with the formatted private key
+    const auth = new JWT({
+      email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      key: GOOGLE_PRIVATE_KEY,
+      scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+      ],
+    });
+    
+    console.log('JWT client created successfully');
+    return auth;
+  } catch (error) {
+    console.error('Error creating JWT client:', error);
+    
+    // Try alternative approach: use keyFile instead of key
+    try {
+      // Convert the key to a proper JSON format
+      const serviceAccountKey = {
+        type: "service_account",
+        private_key: GOOGLE_PRIVATE_KEY,
+        client_email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      };
+      
+      const authAlt = new JWT({
+        email: serviceAccountKey.client_email,
+        key: serviceAccountKey.private_key,
+        scopes: [
+          'https://www.googleapis.com/auth/spreadsheets',
+        ],
+      });
+      
+      console.log('Alternative JWT client created successfully');
+      return authAlt;
+    } catch (altError) {
+      console.error('Alternative JWT creation also failed:', altError);
+      throw new Error('Failed to create authentication client');
+    }
+  }
 };
 
 // Initialize the Google Sheets client
