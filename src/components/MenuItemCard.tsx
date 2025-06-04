@@ -105,19 +105,6 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
 
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex">
-      {item.imageUrl && (
-        <div className="relative w-full h-32 sm:h-36">
-          <Image 
-            src={item.imageUrl} 
-            alt={item.name}
-            fill
-            sizes="(max-width: 640px) 50vw, 33vw"
-            className="object-cover"
-            data-ai-hint={`${item.category.toLowerCase()} food`}
-            priority={false}
-          />
-        </div>
-      )}
       <div className="flex flex-col flex-grow p-2 sm:p-3">
         <CardHeader className="p-2 sm:p-4 pb-0 sm:pb-0">
           <CardTitle className="text-base sm:text-lg line-clamp-1">{item.name}</CardTitle>
@@ -127,8 +114,6 @@ export function MenuItemCard({ item }: MenuItemCardProps) {
         </CardHeader>
         <div className="px-2 sm:px-4 py-1">
           <p className="text-sm sm:text-base font-semibold text-primary">${item.price.toFixed(2)}</p>
-          {/* Hide category on mobile to save space */}
-          <p className="hidden sm:block text-xs text-muted-foreground">{item.category}</p>
         </div>
         <div className="mt-auto p-2 sm:p-4 pt-0 sm:pt-0">
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full">

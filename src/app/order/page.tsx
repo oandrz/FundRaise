@@ -22,7 +22,7 @@ export default function OrderPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('PayNow');
+  const [paymentMethod, setPaymentMethod] = useState('Cash (pay on the day)');
   
   const validatePhone = (phone: string): boolean => {
     // Allow numbers, spaces, +, -, and parentheses
@@ -276,15 +276,17 @@ export default function OrderPage() {
               </div>
             </div>
           </div>
-          <div className="w-full max-w-xs mb-4">
-            <label htmlFor="paymentMethod" className="block text-sm font-medium mb-2">Payment Method</label>
+          <div className="mb-4">
+            <label htmlFor="payment-method" className="block text-sm font-medium text-gray-700 mb-1">
+              Payment Method
+            </label>
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger id="paymentMethod" className="w-full">
+              <SelectTrigger id="payment-method" className="w-full">
                 <SelectValue placeholder="Select payment method" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="Cash (pay on the day)">Cash (pay on the day)</SelectItem>
                 <SelectItem value="PayNow">PayNow</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
               </SelectContent>
             </Select>
           </div>

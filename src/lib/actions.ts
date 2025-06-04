@@ -110,7 +110,7 @@ async function appendToGoogleSheet(orderId: string, items: OrderItem[], customer
       item.price,
       item.price * item.quantity,
       paymentMethod,
-      isPaid,
+      true, // isPaid always true
       '' // notes
     ]);
     // Write each row: if firstEmptyRow is found, write there, else append
