@@ -1,9 +1,8 @@
-
 'use server';
 
 import type { OrderItem } from '@/types';
 import { google } from 'googleapis';
-import { v4 as uuidv4 } from 'uuid';
+import { DateTime } from 'luxon';
 
 interface ConfirmOrderResult {
   success: boolean;
@@ -11,7 +10,20 @@ interface ConfirmOrderResult {
   orderId?: string;
 }
 
-async function appendToGoogleSheet(orderId: string, items: OrderItem[], totalPrice: number, customerName: string, customerPhone: string): Promise<void> {
+// In-memory store for daily order sequence (reset on server restart)
+const orderSeqStore: { [date: string]: number } = {};
+
+function makeOrderIdNode() {
+  // Use Asia/Singapore timezone
+  const now = DateTime.now().setZone('Asia/Singapore');
+  const today = now.toFormat('yyyyMMdd');
+  if (!orderSeqStore[today]) orderSeqStore[today] = 0;
+  orderSeqStore[today] += 1;
+  const seq = orderSeqStore[today];
+  return `ORD-${today}-${('000' + seq).slice(-3)}`;
+}
+
+async function appendToGoogleSheet(orderId: string, items: OrderItem[], customerName: string, customerPhone: string, paymentMethod: string, isPaid: boolean): Promise<void> {
   try {
     const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
     
@@ -64,73 +76,83 @@ async function appendToGoogleSheet(orderId: string, items: OrderItem[], totalPri
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
       });
       console.log('GoogleAuth created successfully for order submission');
-    } catch (authError) {
+    } catch (authError: any) {
       console.error('Error creating GoogleAuth:', authError);
       throw new Error(`Failed to create Google authentication: ${authError.message}`);
     }
 
     const sheets = google.sheets({ version: 'v4', auth });
-
-    const timestamp = new Date().toISOString();
-    
-    // Create a flat array of all items' details
-    const itemDetails: (string | number)[] = [];
-    items.forEach(item => {
-      itemDetails.push(item.name, item.quantity, item.price, item.price * item.quantity);
+    const now = DateTime.now().setZone('Asia/Singapore');
+    const timestamp = now.toFormat('yyyy-MM-dd HH:mm:ss');
+    // Read all of column A from row 2 downward to find first empty row
+    const sheetName = (process.env.GOOGLE_SHEET_RANGE || 'Sheet1!A1').split('!')[0];
+    const colARes = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId!,
+      range: `${sheetName}!A2:A`,
     });
-    
-    // Combine all data in the desired order: Order ID, Timestamp, Customer Name, Customer Phone, [Item Details], Total
-    const rowData: (string | number)[] = [
-      orderId, 
+    const colA = colARes.data.values || [];
+    let firstEmptyRow = null;
+    for (let i = 0; i < colA.length; i++) {
+      if (!colA[i][0]) {
+        firstEmptyRow = i + 2; // 1-based, row 2 is index 0
+        break;
+      }
+    }
+    // Prepare all rows to write
+    const safePhone = customerPhone.startsWith("'") ? customerPhone : "'" + customerPhone;
+    const rows: (string | number | boolean)[][] = items.map(item => [
+      orderId,
       timestamp,
       customerName,
-      customerPhone,
-      ...itemDetails,
-      totalPrice
-    ];
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: sheetId,
-      range: sheetRange,
-      valueInputOption: 'USER_ENTERED',
-      requestBody: {
-        values: [rowData],
-      },
-    });
-    console.log('Order successfully appended to Google Sheet.');
+      safePhone,
+      item.name,
+      item.quantity,
+      item.price,
+      item.price * item.quantity,
+      paymentMethod,
+      isPaid,
+      '' // notes
+    ]);
+    // Write each row: if firstEmptyRow is found, write there, else append
+    for (let i = 0; i < rows.length; i++) {
+      let targetRow = null;
+      if (firstEmptyRow !== null) {
+        targetRow = firstEmptyRow + i;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: sheetId!,
+          range: `${sheetName}!A${targetRow}:K${targetRow}`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [rows[i]] },
+        });
+      } else {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: sheetId!,
+          range: `${sheetName}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [rows[i]] },
+        });
+      }
+    }
   } catch (error) {
     console.error('Error in appendToGoogleSheet function:', error);
-    // Re-throw the error so it's caught by the confirmOrder function's try/catch block
-    // This ensures the user gets an appropriate message if the sheet append fails.
-    throw error; 
+    throw error;
   }
 }
 
-export async function confirmOrder(items: OrderItem[], customerName: string, customerPhone: string): Promise<ConfirmOrderResult> {
+export async function confirmOrder(items: OrderItem[], customerName: string, customerPhone: string, paymentMethod: string, isPaid: boolean): Promise<ConfirmOrderResult> {
   if (!items || items.length === 0) {
     return { success: false, message: 'Your order is empty.' };
   }
-
-  const orderId = uuidv4();
-  const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  console.log(`Processing Order ID: ${orderId}`);
-  console.log('Order items:', JSON.stringify(items, null, 2));
-  console.log(`Total Price: $${totalPrice.toFixed(2)}`);
-
+  const orderId = makeOrderIdNode();
   try {
-    // Attempt to append to Google Sheet only if GOOGLE_SHEET_ID is configured
     if (process.env.GOOGLE_SHEET_ID) {
-      console.log('GOOGLE_SHEET_ID is set, proceeding with Google Sheets integration.');
-      await appendToGoogleSheet(orderId, items, totalPrice, customerName, customerPhone);
+      await appendToGoogleSheet(orderId, items, customerName, customerPhone, paymentMethod, isPaid);
       return {
         success: true,
         message: 'Your order has been confirmed and saved to our records.',
         orderId: orderId,
       };
     } else {
-      // If GOOGLE_SHEET_ID is not set, simulate success without Google Sheets
-      console.log('GOOGLE_SHEET_ID not set in .env.local, skipping Google Sheets integration. Order confirmed locally.');
       return {
         success: true,
         message: 'Your order has been confirmed (Google Sheets logging is disabled).',
@@ -138,9 +160,6 @@ export async function confirmOrder(items: OrderItem[], customerName: string, cus
       };
     }
   } catch (error) {
-    // This catch block will handle errors thrown from appendToGoogleSheet 
-    // or any other errors during the process if GOOGLE_SHEET_ID was set.
-    console.error('Error during order confirmation process (Google Sheets integration attempted):', error);
     return {
       success: false,
       message: `Your order was received (Order ID: ${orderId}) but there was an issue saving it to our records. Please contact support. Details: ${(error as Error).message}`,

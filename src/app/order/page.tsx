@@ -12,6 +12,7 @@ import { Trash2, ShoppingBag, CheckCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { confirmOrder } from '@/lib/actions';
 import Link from 'next/link';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 export default function OrderPage() {
   const { orderItems, updateItemQuantity, removeItem, clearCart, getCartTotalPrice } = useOrder();
@@ -21,6 +22,7 @@ export default function OrderPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('PayNow');
   
   const validatePhone = (phone: string): boolean => {
     // Allow numbers, spaces, +, -, and parentheses
@@ -127,9 +129,10 @@ export default function OrderPage() {
       return;
     }
     
+    const isPaid = paymentMethod === 'PayNow';
     setIsSubmitting(true);
     try {
-      const result = await confirmOrder(orderItems, trimmedName, trimmedPhone);
+      const result = await confirmOrder(orderItems, trimmedName, trimmedPhone, paymentMethod, isPaid);
       if (result.success) {
         toast({
           title: 'Order Confirmed!',
@@ -272,6 +275,18 @@ export default function OrderPage() {
                 )}
               </div>
             </div>
+          </div>
+          <div className="w-full max-w-xs mb-4">
+            <label htmlFor="paymentMethod" className="block text-sm font-medium mb-2">Payment Method</label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger id="paymentMethod" className="w-full">
+                <SelectValue placeholder="Select payment method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PayNow">PayNow</SelectItem>
+                <SelectItem value="Cash">Cash</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-4">
             <Button variant="outline" onClick={clearCart} disabled={isSubmitting}>
