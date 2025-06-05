@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'FundRaising Mission Trip Batam',
+  title: 'Fundraising',
   description: 'Order food easily!',
 };
 
