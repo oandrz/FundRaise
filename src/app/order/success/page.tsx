@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PartyPopper } from 'lucide-react';
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -18,6 +18,7 @@ export default function OrderSuccessPage() {
     setCustomerName(name);
     setCustomerPhone(phone);
   }, [searchParams]);
+  
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-4">
       <PartyPopper className="w-24 h-24 text-green-500 mb-6" />
@@ -43,5 +44,17 @@ export default function OrderSuccessPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <div className="animate-pulse text-muted-foreground">Loading order details...</div>
+      </div>
+    }>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
