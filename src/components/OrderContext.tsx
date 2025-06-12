@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import type { MenuItem, OrderItem } from '@/types';
 
 interface OrderState {
@@ -23,7 +23,8 @@ type OrderAction =
   | { type: 'ADD_ITEM'; payload: { item: MenuItem; quantity: number } }
   | { type: 'UPDATE_ITEM_QUANTITY'; payload: { itemId: string; newQuantity: number } }
   | { type: 'REMOVE_ITEM'; payload: { itemId: string } }
-  | { type: 'CLEAR_CART' };
+  | { type: 'CLEAR_CART' }
+  | { type: 'HYDRATE_CART'; payload: { orderItems: OrderItem[] } };
 
 const orderReducer = (state: OrderState, action: OrderAction): OrderState => {
   switch (action.type) {
@@ -69,13 +70,56 @@ const orderReducer = (state: OrderState, action: OrderAction): OrderState => {
     }
     case 'CLEAR_CART':
       return { ...state, orderItems: [] };
+    case 'HYDRATE_CART': {
+      return { ...state, orderItems: action.payload.orderItems };
+    }
     default:
       return state;
   }
 };
 
+const CART_STORAGE_KEY = 'fundraise_cart';
+
 export const OrderProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(orderReducer, { orderItems: [] });
+  const [hydrated, setHydrated] = React.useState(false);
+
+  // Hydrate cart from localStorage after mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CART_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        let orderItems: OrderItem[] = [];
+        if (Array.isArray(parsed)) {
+          orderItems = parsed;
+        } else if (parsed && Array.isArray(parsed.orderItems)) {
+          orderItems = parsed.orderItems;
+        }
+        if (orderItems.length > 0) {
+          dispatch({ type: 'HYDRATE_CART', payload: { orderItems } });
+        }
+      }
+    } catch (e) {
+      // Ignore
+    } finally {
+      setHydrated(true);
+    }
+  }, []);
+
+  // Sync orderItems to localStorage whenever they change (after hydration)
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      if (state.orderItems.length > 0) {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state.orderItems));
+      } else {
+        localStorage.removeItem(CART_STORAGE_KEY);
+      }
+    } catch (e) {
+      // Ignore write errors
+    }
+  }, [state.orderItems, hydrated]);
 
   const addItem = useCallback((item: MenuItem, quantity: number) => {
     dispatch({ type: 'ADD_ITEM', payload: { item, quantity } });
@@ -91,6 +135,11 @@ export const OrderProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = useCallback(() => {
     dispatch({ type: 'CLEAR_CART' });
+    try {
+      localStorage.removeItem(CART_STORAGE_KEY);
+    } catch (e) {
+      // Ignore
+    }
   }, []);
   
   const getCartTotalQuantity = useCallback(() => {
@@ -100,6 +149,9 @@ export const OrderProvider = ({ children }: { children: ReactNode }) => {
   const getCartTotalPrice = useCallback(() => {
     return state.orderItems.reduce((total, item) => total + item.price * item.quantity, 0);
   }, [state.orderItems]);
+
+  // Optionally, don't render children until hydrated to avoid UI flicker
+  if (!hydrated) return null;
 
   return (
     <OrderContext.Provider
